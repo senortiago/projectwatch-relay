@@ -126,6 +126,32 @@ class ProjectWatchApp {
             }
         });
 
+        // Notification Modal
+        const modalNotify = document.getElementById('modal-notify');
+        const notifyText = document.getElementById('notify-text');
+        
+        document.getElementById('btn-notify').addEventListener('click', () => {
+            modalNotify.classList.remove('hidden');
+            notifyText.focus();
+        });
+
+        document.getElementById('btn-notify-cancel').addEventListener('click', () => {
+            modalNotify.classList.add('hidden');
+            notifyText.value = '';
+        });
+
+        document.getElementById('btn-notify-send').addEventListener('click', () => {
+            const text = notifyText.value.trim();
+            if (text) {
+                this.sendMessage({ type: 'show_notification', text: text });
+                this.showToast('Notification sent to device', 'success');
+                modalNotify.classList.add('hidden');
+                notifyText.value = '';
+            } else {
+                this.showToast('Please enter a message', 'warning');
+            }
+        });
+
         window.addEventListener('resize', () => {
             if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
             this.resizeTimeout = setTimeout(() => {

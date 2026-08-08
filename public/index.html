@@ -123,6 +123,8 @@
             <div class="separator"></div>
             <button class="tool-btn" data-action="wake_screen" title="Wake">💡</button>
             <button class="tool-btn" data-action="lock_screen" title="Lock">🔒</button>
+            <div class="separator"></div>
+            <button class="tool-btn" id="btn-notify" title="Send Notification">✉️</button>
         </div>
 
         <div class="viewer-container" id="viewer-container">
@@ -143,6 +145,18 @@
                 Esc = Back, Enter, Type to input text
             </div>
         </footer>
+
+        <!-- Notification Modal -->
+        <div id="modal-notify" class="modal hidden">
+            <div class="modal-content card">
+                <h3>Send Notification</h3>
+                <textarea id="notify-text" placeholder="Type a message to display on the Android screen..." rows="4"></textarea>
+                <div class="modal-actions">
+                    <button id="btn-notify-cancel" class="btn btn-outline">Cancel</button>
+                    <button id="btn-notify-send" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/clipboard.js"></script>

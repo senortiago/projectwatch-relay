@@ -3,7 +3,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 
 const PORT = process.env.PORT || 8765;
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'projectwatch';
