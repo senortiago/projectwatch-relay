@@ -379,22 +379,28 @@ wss.on('connection', (ws, req) => {
                     if (role === 'windows') session.windowsName = data.deviceName;
                 }
 
-                if (role === 'android' && session.androidId === deviceId) {
+                if (role === 'android') {
+                    if (session.androidId !== deviceId) {
+                        log(`Warning: Android deviceId changed from ${session.androidId} to ${deviceId}`);
+                        session.androidId = deviceId; // Accept new device ID
+                    }
                     session.androidWs = ws;
                     log(`Android ${deviceId} reconnected to session ${sessionToken}`);
                     // Flush queue
                     while (session.androidQueue.length > 0 && ws.readyState === WebSocket.OPEN) {
                         ws.send(session.androidQueue.shift());
                     }
-                } else if (role === 'windows' && session.windowsId === deviceId) {
+                } else if (role === 'windows') {
+                    if (session.windowsId !== deviceId) {
+                        log(`Warning: Windows deviceId changed from ${session.windowsId} to ${deviceId}`);
+                        session.windowsId = deviceId; // Accept new device ID
+                    }
                     session.windowsWs = ws;
                     log(`Windows ${deviceId} reconnected to session ${sessionToken}`);
                     // Flush queue
                     while (session.windowsQueue.length > 0 && ws.readyState === WebSocket.OPEN) {
                         ws.send(session.windowsQueue.shift());
                     }
-                } else {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Invalid device for session' }));
                 }
                 break;
             }
