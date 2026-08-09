@@ -130,6 +130,10 @@ class InputManager {
 
     onKeyDown(e) {
         if (!this.isActive) return;
+        
+        // Don't intercept if typing in an input or textarea
+        const targetTag = e.target.tagName;
+        if (targetTag === 'INPUT' || targetTag === 'TEXTAREA') return;
 
         // Map control keys
         const keyMap = {
@@ -161,6 +165,10 @@ class InputManager {
 
     onKeyPress(e) {
         if (!this.isActive) return;
+        
+        // Don't intercept if typing in an input or textarea
+        const targetTag = e.target.tagName;
+        if (targetTag === 'INPUT' || targetTag === 'TEXTAREA') return;
         
         // Printable characters
         if (e.key.length === 1) {

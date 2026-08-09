@@ -425,6 +425,14 @@ class ProjectWatchApp {
                 this.canvas.width = img.width;
                 this.canvas.height = img.height;
                 document.getElementById('res-indicator').innerText = `${img.width}x${img.height}`;
+                
+                let qText = 'SD';
+                if (img.height >= 1920) qText = '1080p';
+                else if (img.height >= 1280) qText = '720p';
+                else if (img.height >= 720) qText = '480p';
+                
+                const qBadge = document.getElementById('quality-badge');
+                if (qBadge) qBadge.innerText = qText;
             }
             
             this.ctx.drawImage(img, 0, 0);
@@ -437,7 +445,10 @@ class ProjectWatchApp {
     }
 
     updateFps() {
-        document.getElementById('fps-counter').innerText = `${this.frameCount} FPS`;
+        const counter = document.getElementById('fps-counter');
+        if (counter) {
+            counter.innerText = `${this.frameCount} FPS`;
+        }
         this.frameCount = 0;
     }
 
