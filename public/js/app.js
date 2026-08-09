@@ -57,6 +57,7 @@ class ProjectWatchApp {
     init() {
         this.saveSession(); // ensure device id is saved
         this.bindEvents();
+        this.fileManager = new FileManagerUI(this);
         
         if (this.session.authToken) {
             this.showDashboard();
@@ -383,11 +384,19 @@ class ProjectWatchApp {
                     this.showToast(`Device error: ${msg.message}`, 'error');
                 }
                 break;
-                
             case 'clipboard_sync':
                 if (window.clipboardManager) {
                     window.clipboardManager.onRemoteClipboard(msg.content);
                 }
+                break;
+            case 'file_list_response':
+                this.fileManager.handleListResponse(msg);
+                break;
+            case 'file_chunk':
+                this.fileManager.handleChunk(msg);
+                break;
+            case 'file_upload_ack':
+                this.fileManager.handleUploadAck(msg);
                 break;
                 
             case 'error':
