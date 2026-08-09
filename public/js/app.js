@@ -361,6 +361,7 @@ class ProjectWatchApp {
                 this.session.partnerName = msg.partnerName;
                 this.saveSession();
                 this.showToast('Paired successfully!', 'success');
+                document.getElementById('viewer-overlay').classList.add('hidden');
                 this.showScreen('controller');
                 this.requestResolution();
                 break;
