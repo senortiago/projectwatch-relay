@@ -318,8 +318,14 @@ class ProjectWatchApp {
             }
         };
 
-        this.ws.onclose = () => {
+        this.ws.onclose = (e) => {
             this.updateStatus('offline');
+            if (e.code === 1008) {
+                this.showToast('Session expired. Please log in again.', 'error');
+                this.clearSession();
+                this.showScreen('login');
+                return;
+            }
             if (document.getElementById('screen-controller').classList.contains('active') && this.session.sessionToken) {
                 this.scheduleReconnect();
             }
