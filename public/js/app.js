@@ -164,9 +164,21 @@ class ProjectWatchApp {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(`screen-${screenName}`).classList.add('active');
         
+        if (this.stayAwakeInterval) {
+            clearInterval(this.stayAwakeInterval);
+            this.stayAwakeInterval = null;
+            this.sendCommand('allow_sleep');
+        }
+
         if (screenName === 'controller') {
             window.inputManager.attach(this.canvas, this);
             this.requestResolution();
+            
+            // Start stay awake heartbeat
+            this.sendCommand('keep_awake');
+            this.stayAwakeInterval = setInterval(() => {
+                this.sendCommand('keep_awake');
+            }, 30000); // every 30 seconds
         } else {
             window.inputManager.detach();
         }
@@ -207,7 +219,7 @@ class ProjectWatchApp {
         this.showScreen('login');
     }
 
-    showDashboard() {
+    async showDashboard() {
         this.showScreen('dashboard');
         
         document.getElementById('server-url-display').innerText = this.wsUrl;
@@ -216,6 +228,21 @@ class ProjectWatchApp {
             document.getElementById('view-pairing').classList.remove('active');
             document.getElementById('view-device').classList.add('active');
             document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
+            
+            try {
+                const res = await fetch('/api/status', {
+                    headers: { 'Authorization': `Bearer ${this.session.authToken}` }
+                });
+                const data = await res.json();
+                const mySession = data.sessions?.find(s => s.token === this.session.sessionToken);
+                if (mySession && mySession.androidOnline) {
+                    this.updateStatus('online');
+                } else {
+                    this.updateStatus('offline');
+                }
+            } catch (e) {
+                this.updateStatus('offline');
+            }
         } else {
             document.getElementById('view-device').classList.remove('active');
             document.getElementById('view-pairing').classList.add('active');
@@ -461,7 +488,13 @@ class ProjectWatchApp {
         dotDash.className = `status-dot ${status}`;
         dotCtrl.className = `status-dot ${status}`;
         
-        textDash.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+        if (status === 'online') {
+            textDash.innerText = 'Connected';
+        } else if (status === 'offline') {
+            textDash.innerText = 'Offline';
+        } else {
+            textDash.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+        }
         
         if (status === 'connecting') {
             overlay.classList.remove('hidden');
