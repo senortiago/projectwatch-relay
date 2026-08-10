@@ -187,45 +187,88 @@
 
         <!-- File Manager Modal -->
         <div id="modal-files" class="modal hidden">
-            <div class="modal-content card" style="max-width: 600px; width: 90%; height: 80vh; display: flex; flex-direction: column;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="fm-container card">
+                <div class="fm-header">
                     <h3>File Explorer</h3>
-                    <button id="btn-files-close" class="icon-btn" style="background: none; border: none; color: inherit; cursor: pointer;">
+                    <button id="btn-files-close" class="icon-btn">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 
-                <div class="file-toolbar" style="display: flex; gap: 10px; margin: 15px 0;">
-                    <button id="btn-files-up" class="btn btn-outline btn-sm">⬆ Up</button>
-                    <div id="files-path" style="flex: 1; padding: 5px 10px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace;">/</div>
-                    <label for="file-upload-input" class="btn btn-primary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;">Upload</label>
-                    <input type="file" id="file-upload-input" style="display: none;">
+                <div class="fm-panes">
+                    <!-- Local Pane -->
+                    <div class="fm-pane" id="fm-local-pane">
+                        <div class="fm-pane-header">💻 Local</div>
+                        <div class="fm-path-bar">
+                            <button id="fm-local-up" class="btn btn-outline btn-sm">⬆ Up</button>
+                            <div class="fm-path" id="fm-local-path">/</div>
+                        </div>
+                        <div class="fm-file-list" id="fm-local-list">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
+                                <thead style="background: rgba(255,255,255,0.05); position: sticky; top: 0;">
+                                    <tr>
+                                        <th style="padding: 8px; width: 30px;"><input type="checkbox" id="fm-local-select-all"></th>
+                                        <th style="padding: 8px; width: 30px;"></th>
+                                        <th style="padding: 8px;">Name</th>
+                                        <th style="padding: 8px; width: 80px;">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fm-local-body">
+                                    <tr><td colspan="4" style="text-align:center; padding:20px;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="fm-toolbar">
+                            <button id="fm-local-mkdir" class="btn btn-outline btn-sm">New Folder</button>
+                            <button id="fm-local-delete" class="btn btn-outline btn-sm" style="color: var(--error); border-color: var(--error);">Delete</button>
+                            <button id="fm-local-upload" class="btn btn-primary btn-sm">Upload File</button>
+                            <input type="file" id="fm-local-upload-input" style="display: none;" multiple>
+                        </div>
+                    </div>
+
+                    <!-- Transfer Column -->
+                    <div class="fm-transfer-col">
+                        <button id="fm-transfer-to-remote" class="btn btn-primary btn-sm" title="Send to Remote">→</button>
+                        <button id="fm-transfer-to-local" class="btn btn-primary btn-sm" title="Download to Local">←</button>
+                    </div>
+
+                    <!-- Remote Pane -->
+                    <div class="fm-pane" id="fm-remote-pane">
+                        <div class="fm-pane-header">📱 Remote</div>
+                        <div class="fm-path-bar">
+                            <button id="fm-remote-up" class="btn btn-outline btn-sm">⬆ Up</button>
+                            <div class="fm-path" id="fm-remote-path">/</div>
+                        </div>
+                        <div class="fm-file-list" id="fm-remote-list">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
+                                <thead style="background: rgba(255,255,255,0.05); position: sticky; top: 0;">
+                                    <tr>
+                                        <th style="padding: 8px; width: 30px;"><input type="checkbox" id="fm-remote-select-all"></th>
+                                        <th style="padding: 8px; width: 30px;"></th>
+                                        <th style="padding: 8px;">Name</th>
+                                        <th style="padding: 8px; width: 80px;">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fm-remote-body">
+                                    <tr><td colspan="4" style="text-align:center; padding:20px;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="fm-toolbar">
+                            <button id="fm-remote-mkdir" class="btn btn-outline btn-sm">New Folder</button>
+                            <button id="fm-remote-delete" class="btn btn-outline btn-sm" style="color: var(--error); border-color: var(--error);">Delete</button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div id="file-list-container" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
-                        <thead style="background: rgba(255,255,255,0.05); position: sticky; top: 0;">
-                            <tr>
-                                <th style="padding: 10px; width: 40px; border-bottom: 1px solid rgba(255,255,255,0.1);"></th>
-                                <th style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">Name</th>
-                                <th style="padding: 10px; width: 100px; border-bottom: 1px solid rgba(255,255,255,0.1);">Size</th>
-                                <th style="padding: 10px; width: 80px; border-bottom: 1px solid rgba(255,255,255,0.1);">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="file-list-body">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div id="file-transfer-status" style="margin-top: 15px; font-size: 0.9em; color: var(--color-primary); min-height: 20px;"></div>
+
+                <div id="fm-status" class="fm-status">Ready</div>
             </div>
         </div>
     </div>
 
-    <script src="js/clipboard.js?v=5"></script>
-    <script src="js/input.js?v=5"></script>
-    <script src="js/filemanager.js?v=5"></script>
-    <script src="js/app.js?v=5"></script>
+    <script src="js/clipboard.js?v=6"></script>
+    <script src="js/input.js?v=6"></script>
+    <script src="js/filemanager.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
 </body>
 </html>

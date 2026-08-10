@@ -427,6 +427,12 @@ class ProjectWatchApp {
             case 'file_upload_ack':
                 this.fileManager.handleUploadAck(msg);
                 break;
+            case 'file_delete_response':
+                this.fileManager.handleDeleteResponse(msg);
+                break;
+            case 'file_mkdir_response':
+                this.fileManager.handleMkdirResponse(msg);
+                break;
                 
             case 'reconnect_success':
                 this.updateStatus('online');
