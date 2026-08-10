@@ -99,6 +99,8 @@ class ProjectWatchApp {
 
         document.getElementById('btn-unpair').addEventListener('click', () => this.unpair());
         document.getElementById('btn-connect').addEventListener('click', () => {
+            this.reconnectAttempts = 0;
+            this.isReconnecting = false;
             this.connectWebSocket();
             this.showScreen('controller');
         });
@@ -266,12 +268,31 @@ class ProjectWatchApp {
     }
 
     unpair() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
         this.clearSession();
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
         this.showDashboard();
     }
 
     connectWebSocket(pairingCode = null) {
-        if (this.ws) this.ws.close();
+        if (this.ws) {
+            // Detach handlers before closing to prevent triggering onclose logic
+            this.ws.onclose = null;
+            this.ws.onerror = null;
+            this.ws.onmessage = null;
+            this.ws.close();
+            this.ws = null;
+        }
+
+        if (!this.session.authToken) {
+            this.showToast('Not authenticated. Please log in.', 'error');
+            this.showScreen('login');
+            return;
+        }
         
         const url = `${this.wsUrl}?token=${this.session.authToken}`;
         this.ws = new WebSocket(url);
@@ -342,15 +363,16 @@ class ProjectWatchApp {
         
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             this.showToast('Connection lost. Please try reconnecting from dashboard.', 'error');
-            this.showDashboard();
             this.isReconnecting = false;
+            this.reconnectAttempts = 0;
+            this.showDashboard();
             return;
         }
         
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60000);
         this.reconnectAttempts++;
         
-        this.showToast(`Reconnecting in ${delay/1000}s...`, 'warning');
+        this.showToast(`Reconnecting in ${delay/1000}s... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, 'warning');
         
         setTimeout(() => {
             this.isReconnecting = false;
@@ -406,17 +428,28 @@ class ProjectWatchApp {
                 this.fileManager.handleUploadAck(msg);
                 break;
                 
+            case 'reconnect_success':
+                this.updateStatus('online');
+                document.getElementById('viewer-overlay').classList.add('hidden');
+                document.getElementById('ctrl-device-name').innerText = msg.partnerName || this.session.partnerName || 'Device';
+                this.requestResolution();
+                if (!msg.partnerOnline) {
+                    this.showToast('Connected to server. Waiting for device...', 'warning');
+                }
+                break;
+
             case 'error':
                 // Error from relay server
                 if (msg.message === 'Invalid session') {
                     this.showToast('Session expired. Please unpair and pair again.', 'error');
                     this.clearSession();
+                    if (this.ws) { this.ws.close(); this.ws = null; }
                     this.showDashboard();
                 } else if (msg.message === 'Invalid pairing code') {
                     document.getElementById('btn-pair').disabled = false;
                     document.getElementById('btn-pair').innerText = 'Connect';
                     document.getElementById('pair-error').innerText = 'Invalid pairing code. Please try again.';
-                    if (this.ws) this.ws.close();
+                    if (this.ws) { this.ws.close(); this.ws = null; }
                 } else {
                     this.showToast(msg.message || 'Server error', 'error');
                 }

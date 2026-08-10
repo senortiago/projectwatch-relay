@@ -236,8 +236,11 @@ wss.on('connection', (ws, req) => {
             return;
         }
 
+        // Protocol messages that must always be processed by the server
+        const protocolTypes = ['register', 'reconnect', 'pair_offer', 'pair_request'];
+        
         // Routing logic for paired devices (pass-through for custom types like text_input, touch, etc.)
-        if (conn.sessionToken && data.type !== 'register' && data.type !== 'reconnect') {
+        if (conn.sessionToken && !protocolTypes.includes(data.type)) {
             const session = sessions.get(conn.sessionToken);
             if (!session) return;
 
@@ -248,11 +251,10 @@ wss.on('connection', (ws, req) => {
             if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
                 partnerWs.send(message.toString());
             } else {
-                // Partner offline, queue message
-                if (partnerQueue.length < MAX_QUEUE_SIZE) {
+                // Partner offline — only queue non-ephemeral messages (skip touch/key/resolution)
+                const ephemeralTypes = ['touch', 'key', 'resolution_request', 'keep_awake'];
+                if (!ephemeralTypes.includes(data.type) && partnerQueue.length < MAX_QUEUE_SIZE) {
                     partnerQueue.push(message.toString());
-                } else {
-                    log(`Queue full for session ${conn.sessionToken}, dropping message.`, 'WARN');
                 }
             }
             return;
@@ -402,6 +404,17 @@ wss.on('connection', (ws, req) => {
                         ws.send(session.windowsQueue.shift());
                     }
                 }
+
+                // Send reconnect_success back to the client
+                const partnerRole2 = role === 'android' ? 'windows' : 'android';
+                const partnerWs2 = partnerRole2 === 'windows' ? session.windowsWs : session.androidWs;
+                ws.send(JSON.stringify({
+                    type: 'reconnect_success',
+                    sessionToken,
+                    partnerName: role === 'android' ? session.windowsName : session.androidName,
+                    partnerOnline: partnerWs2 ? partnerWs2.readyState === WebSocket.OPEN : false
+                }));
+                log(`Reconnect success sent to ${role} for session ${sessionToken}`);
                 break;
             }
             
