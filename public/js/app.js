@@ -73,6 +73,22 @@ class ProjectWatchApp {
             this.login(document.getElementById('password').value);
         });
 
+        const pwInput = document.getElementById('password');
+        const btnShowPw = document.getElementById('btn-show-password');
+        if (pwInput && btnShowPw) {
+            btnShowPw.addEventListener('click', () => {
+                if (pwInput.type === 'password') {
+                    pwInput.type = 'text';
+                    btnShowPw.innerText = '🔒';
+                    btnShowPw.title = 'Hide Password';
+                } else {
+                    pwInput.type = 'password';
+                    btnShowPw.innerText = '👁️';
+                    btnShowPw.title = 'Show Password';
+                }
+            });
+        }
+
         // Dashboard
         document.getElementById('btn-logout').addEventListener('click', () => this.logout());
         

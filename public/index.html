@@ -29,7 +29,10 @@
             <form id="login-form">
                 <div class="input-group">
                     <label for="password">Server Password</label>
-                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="password" id="password" placeholder="Enter your password" required style="width: 100%; padding-right: 40px; box-sizing: border-box;">
+                        <button type="button" id="btn-show-password" style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.2em; padding: 0;" title="Show Password">👁️</button>
+                    </div>
                 </div>
                 <div id="login-error" class="error-msg"></div>
                 <button type="submit" class="btn btn-primary btn-block">Sign In</button>
@@ -267,9 +270,9 @@
         </div>
     </div>
 
-    <script src="js/clipboard.js?v=10"></script>
-    <script src="js/input.js?v=10"></script>
-    <script src="js/filemanager.js?v=10"></script>
-    <script src="js/app.js?v=10"></script>
+    <script src="js/clipboard.js?v=11"></script>
+    <script src="js/input.js?v=11"></script>
+    <script src="js/filemanager.js?v=11"></script>
+    <script src="js/app.js?v=11"></script>
 </body>
 </html>
