@@ -1,3 +1,4 @@
+class FileManagerUI {
     constructor(app) {
         this.app = app;
         this.modal = document.getElementById('modal-files');
@@ -6,6 +7,13 @@
         this.remotePath = '';
         this.remoteFiles = [];
         this.remoteSelected = new Set();
+        
+        // Local state
+        this.localDirHandle = null;
+        this.localPath = '';
+        this.localDirStack = [];
+        this.localFiles = [];
+        this.localSelected = new Set();
         
         // Transfer state
         this.downloadChunks = {};
@@ -21,14 +29,13 @@
         document.getElementById('btn-files').addEventListener('click', () => this.open());
         document.getElementById('btn-files-close').addEventListener('click', () => this.close());
         
-        // Remote Pane Operations
+        // Remote Pane
         document.getElementById('fm-remote-up').addEventListener('click', () => this.remoteUp());
         document.getElementById('fm-remote-refresh').addEventListener('click', () => {
             if (this.remotePath) this.requestRemoteList(this.remotePath);
         });
         document.getElementById('fm-remote-mkdir').addEventListener('click', () => this.remoteCreateFolder());
         document.getElementById('fm-remote-delete').addEventListener('click', () => this.remoteDelete());
-        
         document.getElementById('fm-remote-select-all').addEventListener('change', (e) => {
             if (e.target.checked) {
                 this.remoteFiles.forEach((_, i) => this.remoteSelected.add(i));
@@ -38,12 +45,23 @@
             this.renderRemoteFiles();
         });
         
-        // Upload & Download
-        document.getElementById('fm-remote-upload').addEventListener('click', () => {
-            document.getElementById('fm-remote-upload-input').click();
+        // Local Pane
+        document.getElementById('fm-local-up').addEventListener('click', () => this.localUp());
+        document.getElementById('fm-local-mkdir').addEventListener('click', () => this.localCreateFolder());
+        document.getElementById('fm-local-delete').addEventListener('click', () => this.localDelete());
+        
+        // Use regular file input as fallback for upload, but we primarily want File System Access API
+        document.getElementById('fm-local-upload').addEventListener('click', (e) => {
+            if (window.showDirectoryPicker) {
+                e.preventDefault();
+                this.pickLocalFolder();
+            } else {
+                // Fallback to input
+                document.getElementById('fm-local-upload-input').click();
+            }
         });
         
-        document.getElementById('fm-remote-upload-input').addEventListener('change', async (e) => {
+        document.getElementById('fm-local-upload-input').addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 for (let file of e.target.files) {
                     await this.uploadLocalFileFallback(file, this.remotePath);
@@ -52,12 +70,28 @@
             }
         });
         
-        document.getElementById('fm-remote-download').addEventListener('click', () => this.transferToLocal());
+        document.getElementById('fm-local-select-all').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.localFiles.forEach((_, i) => this.localSelected.add(i));
+            } else {
+                this.localSelected.clear();
+            }
+            this.renderLocalFiles();
+        });
+        
+        // Transfers
+        document.getElementById('fm-transfer-to-remote').addEventListener('click', () => this.transferToRemote());
+        document.getElementById('fm-transfer-to-local').addEventListener('click', () => this.transferToLocal());
     }
     
     open() {
         this.modal.classList.remove('hidden');
         this.requestRemoteList('');
+        if (!this.localDirHandle && window.showDirectoryPicker) {
+            document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Click "Upload File" to select a local folder to browse.</td></tr>';
+        } else if (!window.showDirectoryPicker) {
+            document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Browser does not support local folder browsing.<br>Use Chrome/Edge or use Upload button directly.</td></tr>';
+        }
     }
     
     close() {
@@ -178,7 +212,173 @@
         this.setStatus(`Deleting ${this.remoteSelected.size} items...`);
     }
     
+    // --- Local Pane (Left) ---
+    async pickLocalFolder() {
+        try {
+            this.localDirHandle = await window.showDirectoryPicker();
+            this.localDirStack = [this.localDirHandle];
+            this.localPath = this.localDirHandle.name;
+            await this.refreshLocalFiles();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+    
+    async refreshLocalFiles() {
+        if (!this.localDirHandle) return;
+        
+        document.getElementById('fm-local-path').innerText = this.localPath;
+        document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading...</td></tr>';
+        
+        this.localFiles = [];
+        this.localSelected.clear();
+        
+        try {
+            for await (const entry of this.localDirHandle.values()) {
+                let size = 0;
+                if (entry.kind === 'file') {
+                    const file = await entry.getFile();
+                    size = file.size;
+                }
+                this.localFiles.push({
+                    name: entry.name,
+                    isDirectory: entry.kind === 'directory',
+                    handle: entry,
+                    size: size
+                });
+            }
+            
+            this.localFiles.sort((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+                return a.name.localeCompare(b.name);
+            });
+            
+            this.renderLocalFiles();
+        } catch (err) {
+            this.setStatus('Error reading local folder: ' + err.message);
+        }
+    }
+    
+    renderLocalFiles() {
+        const tbody = document.getElementById('fm-local-body');
+        tbody.innerHTML = '';
+        
+        if (this.localFiles.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Folder is empty</td></tr>';
+            return;
+        }
+        
+        this.localFiles.forEach((file, index) => {
+            const tr = document.createElement('tr');
+            tr.className = 'fm-file-row';
+            if (this.localSelected.has(index)) tr.classList.add('selected');
+            
+            const icon = file.isDirectory ? '📁' : '📄';
+            const sizeStr = file.isDirectory ? '--' : this.formatSize(file.size);
+            
+            tr.innerHTML = `
+                <td style="padding: 8px; text-align: center;"><input type="checkbox" ${this.localSelected.has(index) ? 'checked' : ''}></td>
+                <td style="padding: 8px; text-align: center;">${icon}</td>
+                <td style="padding: 8px; word-break: break-all;">${file.name}</td>
+                <td style="padding: 8px; color: var(--text-muted);">${sizeStr}</td>
+            `;
+            
+            tr.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (e.target.checked) this.localSelected.add(index);
+                else this.localSelected.delete(index);
+                tr.classList.toggle('selected', e.target.checked);
+            });
+            
+            tr.addEventListener('click', () => {
+                if (file.isDirectory) {
+                    this.localNavigate(file.name, file.handle);
+                } else {
+                    const cb = tr.querySelector('input[type="checkbox"]');
+                    cb.click();
+                }
+            });
+            
+            tbody.appendChild(tr);
+        });
+    }
+    
+    async localNavigate(name, handle) {
+        this.localDirHandle = handle;
+        this.localDirStack.push(handle);
+        this.localPath += '/' + name;
+        await this.refreshLocalFiles();
+    }
+    
+    async localUp() {
+        if (this.localDirStack.length > 1) {
+            this.localDirStack.pop();
+            this.localDirHandle = this.localDirStack[this.localDirStack.length - 1];
+            
+            const parts = this.localPath.split('/');
+            parts.pop();
+            this.localPath = parts.join('/') || this.localDirHandle.name;
+            
+            await this.refreshLocalFiles();
+        }
+    }
+    
+    async localCreateFolder() {
+        if (!this.localDirHandle) return;
+        const name = prompt('Folder name:');
+        if (!name) return;
+        
+        try {
+            await this.localDirHandle.getDirectoryHandle(name, { create: true });
+            await this.refreshLocalFiles();
+        } catch (err) {
+            this.setStatus('Error creating folder: ' + err.message);
+        }
+    }
+    
+    async localDelete() {
+        if (!this.localDirHandle || this.localSelected.size === 0) return;
+        if (!confirm(`Delete ${this.localSelected.size} selected items locally?`)) return;
+        
+        try {
+            for (let index of this.localSelected) {
+                const file = this.localFiles[index];
+                await this.localDirHandle.removeEntry(file.name, { recursive: file.isDirectory });
+            }
+            await this.refreshLocalFiles();
+        } catch (err) {
+            this.setStatus('Error deleting local files: ' + err.message);
+        }
+    }
+    
     // --- Transfers ---
+    async transferToRemote() {
+        if (this.localSelected.size === 0) return;
+        if (!this.remotePath) {
+            this.setStatus('Please select a remote folder first.');
+            return;
+        }
+        
+        this.setStatus(`Starting upload to ${this.remotePath}...`);
+        
+        for (let index of this.localSelected) {
+            const fileData = this.localFiles[index];
+            if (fileData.isDirectory) {
+                this.setStatus(`Cannot upload folders yet: ${fileData.name}`);
+                continue;
+            }
+            try {
+                const file = await fileData.handle.getFile();
+                await this.uploadLocalFile(file, this.remotePath);
+            } catch (err) {
+                this.setStatus(`Upload error for ${fileData.name}: ${err.message}`);
+            }
+        }
+        this.localSelected.clear();
+        this.renderLocalFiles();
+    }
+    
     transferToLocal() {
         if (this.remoteSelected.size === 0) return;
         
@@ -244,7 +444,21 @@
         this.setStatus(`Completed download of ${transfer.name}`);
         
         const blob = new Blob(transfer.chunks);
-        this.fallbackDownload(blob, transfer.name);
+        
+        // If we have a local dir handle, try to write it directly, else fallback to anchor download
+        if (this.localDirHandle && window.showDirectoryPicker) {
+            try {
+                const fileHandle = await this.localDirHandle.getFileHandle(transfer.name, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                await this.refreshLocalFiles();
+            } catch (err) {
+                this.fallbackDownload(blob, transfer.name);
+            }
+        } else {
+            this.fallbackDownload(blob, transfer.name);
+        }
         
         delete this.downloadChunks[transferId];
     }
