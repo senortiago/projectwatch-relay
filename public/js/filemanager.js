@@ -45,23 +45,11 @@ class FileManagerUI {
             this.renderRemoteFiles();
         });
         
-        // Local Pane
-        document.getElementById('fm-local-up').addEventListener('click', () => this.localUp());
-        document.getElementById('fm-local-mkdir').addEventListener('click', () => this.localCreateFolder());
-        document.getElementById('fm-local-delete').addEventListener('click', () => this.localDelete());
-        
-        // Use regular file input as fallback for upload, but we primarily want File System Access API
-        document.getElementById('fm-local-upload').addEventListener('click', (e) => {
-            if (window.showDirectoryPicker) {
-                e.preventDefault();
-                this.pickLocalFolder();
-            } else {
-                // Fallback to input
-                document.getElementById('fm-local-upload-input').click();
-            }
+        // Remote Upload (pick file from PC and send to phone)
+        document.getElementById('fm-remote-upload').addEventListener('click', () => {
+            document.getElementById('fm-remote-upload-input').click();
         });
-        
-        document.getElementById('fm-local-upload-input').addEventListener('change', async (e) => {
+        document.getElementById('fm-remote-upload-input').addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 for (let file of e.target.files) {
                     await this.uploadLocalFileFallback(file, this.remotePath);
@@ -69,6 +57,12 @@ class FileManagerUI {
                 e.target.value = '';
             }
         });
+        
+        // Local Pane
+        document.getElementById('fm-local-up').addEventListener('click', () => this.localUp());
+        document.getElementById('fm-local-browse').addEventListener('click', () => this.pickLocalFolder());
+        document.getElementById('fm-local-mkdir').addEventListener('click', () => this.localCreateFolder());
+        document.getElementById('fm-local-delete').addEventListener('click', () => this.localDelete());
         
         document.getElementById('fm-local-select-all').addEventListener('change', (e) => {
             if (e.target.checked) {
@@ -87,11 +81,6 @@ class FileManagerUI {
     open() {
         this.modal.classList.remove('hidden');
         this.requestRemoteList('');
-        if (!this.localDirHandle && window.showDirectoryPicker) {
-            document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Click "Upload File" to select a local folder to browse.</td></tr>';
-        } else if (!window.showDirectoryPicker) {
-            document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Browser does not support local folder browsing.<br>Use Chrome/Edge or use Upload button directly.</td></tr>';
-        }
     }
     
     close() {
@@ -214,13 +203,21 @@ class FileManagerUI {
     
     // --- Local Pane (Left) ---
     async pickLocalFolder() {
+        if (!window.showDirectoryPicker) {
+            this.setStatus('Folder browsing requires HTTPS. Use the Upload button on the Remote pane to send files.');
+            document.getElementById('fm-local-body').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Folder browsing requires HTTPS.<br>Use the <b>Upload File</b> button on the Remote pane to send files to your phone.</td></tr>';
+            return;
+        }
         try {
             this.localDirHandle = await window.showDirectoryPicker();
             this.localDirStack = [this.localDirHandle];
             this.localPath = this.localDirHandle.name;
             await this.refreshLocalFiles();
         } catch (err) {
-            console.error(err);
+            if (err.name !== 'AbortError') {
+                console.error(err);
+                this.setStatus('Error: ' + err.message);
+            }
         }
     }
     

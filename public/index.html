@@ -201,10 +201,11 @@
                 <div class="fm-panes">
                     <!-- Local Pane -->
                     <div class="fm-pane" id="fm-local-pane">
-                        <div class="fm-pane-header">💻 Local</div>
+                        <div class="fm-pane-header">💻 Your PC</div>
                         <div class="fm-path-bar">
                             <button id="fm-local-up" class="btn btn-outline btn-sm">⬆ Up</button>
-                            <div class="fm-path" id="fm-local-path">/</div>
+                            <button id="fm-local-browse" class="btn btn-outline btn-sm">📂 Browse Folder</button>
+                            <div class="fm-path" id="fm-local-path" style="flex: 1;">/</div>
                         </div>
                         <div class="fm-file-list" id="fm-local-list">
                             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
@@ -217,15 +218,13 @@
                                     </tr>
                                 </thead>
                                 <tbody id="fm-local-body">
-                                    <tr><td colspan="4" style="text-align:center; padding:20px;">Loading...</td></tr>
+                                    <tr><td colspan="4" style="text-align:center; padding:20px;">Click "Browse Folder" to select a local folder.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="fm-toolbar">
                             <button id="fm-local-mkdir" class="btn btn-outline btn-sm">New Folder</button>
                             <button id="fm-local-delete" class="btn btn-outline btn-sm" style="color: var(--error); border-color: var(--error);">Delete</button>
-                            <button id="fm-local-upload" class="btn btn-primary btn-sm">Upload File</button>
-                            <input type="file" id="fm-local-upload-input" style="display: none;" multiple>
                         </div>
                     </div>
 
@@ -261,6 +260,9 @@
                         <div class="fm-toolbar">
                             <button id="fm-remote-mkdir" class="btn btn-outline btn-sm">New Folder</button>
                             <button id="fm-remote-delete" class="btn btn-outline btn-sm" style="color: var(--error); border-color: var(--error);">Delete</button>
+                            <div style="flex: 1;"></div>
+                            <button id="fm-remote-upload" class="btn btn-primary btn-sm">Upload File</button>
+                            <input type="file" id="fm-remote-upload-input" style="display: none;" multiple>
                         </div>
                     </div>
                 </div>
@@ -270,9 +272,9 @@
         </div>
     </div>
 
-    <script src="js/clipboard.js?v=11"></script>
-    <script src="js/input.js?v=11"></script>
-    <script src="js/filemanager.js?v=11"></script>
-    <script src="js/app.js?v=11"></script>
+    <script src="js/clipboard.js?v=12"></script>
+    <script src="js/input.js?v=12"></script>
+    <script src="js/filemanager.js?v=12"></script>
+    <script src="js/app.js?v=12"></script>
 </body>
 </html>
