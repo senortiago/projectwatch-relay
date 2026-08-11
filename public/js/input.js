@@ -44,15 +44,21 @@ class InputManager {
     getNormalizedPos(clientX, clientY) {
         const rect = this.canvas.getBoundingClientRect();
         
-        // Calculate the actual drawn image area within the canvas
-        // (handling object-fit: contain simulation if needed)
-        // Since canvas size matches image size and css sets max-width/height,
-        // we can map directly to the rect size.
+        // Calculate the actual drawn image area within the canvas due to object-fit: contain
+        const scaleX = rect.width / this.canvas.width;
+        const scaleY = rect.height / this.canvas.height;
+        const scale = Math.min(scaleX, scaleY);
         
-        let x = (clientX - rect.left) / rect.width;
-        let y = (clientY - rect.top) / rect.height;
+        const drawWidth = this.canvas.width * scale;
+        const drawHeight = this.canvas.height * scale;
+        
+        const offsetX = (rect.width - drawWidth) / 2;
+        const offsetY = (rect.height - drawHeight) / 2;
+        
+        let x = (clientX - rect.left - offsetX) / drawWidth;
+        let y = (clientY - rect.top - offsetY) / drawHeight;
 
-        // Clamp
+        // Clamp to prevent out of bounds
         x = Math.max(0, Math.min(1, x));
         y = Math.max(0, Math.min(1, y));
 
