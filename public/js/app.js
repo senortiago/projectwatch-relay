@@ -227,29 +227,47 @@ class ProjectWatchApp {
         
         document.getElementById('server-url-display').innerText = this.wsUrl;
         
-        if (this.session.sessionToken) {
-            document.getElementById('view-pairing').classList.remove('active');
-            document.getElementById('view-device').classList.add('active');
-            document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
+        try {
+            const res = await fetch('/api/status', {
+                headers: { 'Authorization': `Bearer ${this.session.authToken}` }
+            });
+            const data = await res.json();
             
-            try {
-                const res = await fetch('/api/status', {
-                    headers: { 'Authorization': `Bearer ${this.session.authToken}` }
-                });
-                const data = await res.json();
+            // Account-level pairing: if we don't have a local sessionToken but the server has active sessions, adopt the most recent one.
+            if (!this.session.sessionToken && data.sessions && data.sessions.length > 0) {
+                const latestSession = data.sessions.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive))[0];
+                this.session.sessionToken = latestSession.token;
+                this.session.partnerName = latestSession.androidName;
+                this.saveSession();
+            }
+            
+            if (this.session.sessionToken) {
+                document.getElementById('view-pairing').classList.remove('active');
+                document.getElementById('view-device').classList.add('active');
+                document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
+                
                 const mySession = data.sessions?.find(s => s.token === this.session.sessionToken);
                 if (mySession && mySession.androidOnline) {
                     this.updateStatus('online');
                 } else {
                     this.updateStatus('offline');
                 }
-            } catch (e) {
-                this.updateStatus('offline');
+            } else {
+                document.getElementById('view-device').classList.remove('active');
+                document.getElementById('view-pairing').classList.add('active');
+                document.querySelectorAll('.digit-input').forEach(i => i.value = '');
             }
-        } else {
-            document.getElementById('view-device').classList.remove('active');
-            document.getElementById('view-pairing').classList.add('active');
-            document.querySelectorAll('.digit-input').forEach(i => i.value = '');
+        } catch (e) {
+            // Offline fallback
+            if (this.session.sessionToken) {
+                document.getElementById('view-pairing').classList.remove('active');
+                document.getElementById('view-device').classList.add('active');
+                document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
+                this.updateStatus('offline');
+            } else {
+                document.getElementById('view-device').classList.remove('active');
+                document.getElementById('view-pairing').classList.add('active');
+            }
         }
     }
 
