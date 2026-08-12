@@ -746,10 +746,19 @@ body, html {
 }
 
 /* Conversation List */
+#sms-view-conversations,
+#sms-view-thread {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+}
+
 .sms-conv-list {
     flex: 1;
     overflow-y: auto;
-    max-height: 65vh;
+    /* max-height removed to use flex */
 }
 
 .sms-conv-item {
@@ -873,7 +882,6 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 55vh;
 }
 
 .sms-date-separator {
