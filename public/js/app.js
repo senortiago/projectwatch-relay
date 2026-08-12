@@ -58,6 +58,7 @@ class ProjectWatchApp {
         this.saveSession(); // ensure device id is saved
         this.bindEvents();
         this.fileManager = new FileManagerUI(this);
+        this.smsUI = new SmsUI(this);
         
         if (this.session.authToken) {
             this.showDashboard();
@@ -466,6 +467,15 @@ class ProjectWatchApp {
                 break;
             case 'file_mkdir_response':
                 this.fileManager.handleMkdirResponse(msg);
+                break;
+            case 'sms_conversations_response':
+                this.smsUI.handleConversationsResponse(msg);
+                break;
+            case 'sms_thread_response':
+                this.smsUI.handleThreadResponse(msg);
+                break;
+            case 'sms_incoming':
+                this.smsUI.handleIncoming(msg);
                 break;
                 
             case 'reconnect_success':

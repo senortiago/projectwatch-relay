@@ -152,6 +152,9 @@
             <button class="tool-btn" id="btn-notify" title="Send Notification">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
             </button>
+            <button class="tool-btn" id="btn-sms" title="SMS Messages">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </button>
             <button class="tool-btn" id="btn-files" title="File Explorer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             </button>
@@ -184,6 +187,40 @@
                 <div class="modal-actions">
                     <button id="btn-notify-cancel" class="btn btn-outline">Cancel</button>
                     <button id="btn-notify-send" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMS Modal -->
+        <div id="modal-sms" class="modal hidden">
+            <div class="sms-container card">
+                <div class="sms-header">
+                    <button id="btn-sms-back" class="btn btn-outline btn-sm hidden">← Back</button>
+                    <h3>💬 Messages</h3>
+                    <div style="flex: 1;"></div>
+                    <button id="btn-sms-refresh" class="btn btn-outline btn-sm">🔄</button>
+                    <button id="btn-sms-close" class="btn btn-outline btn-sm">✕</button>
+                </div>
+                
+                <!-- Conversation List View -->
+                <div id="sms-view-conversations">
+                    <div id="sms-conv-list" class="sms-conv-list">
+                        <div class="sms-loading">Loading conversations...</div>
+                    </div>
+                </div>
+                
+                <!-- Thread View -->
+                <div id="sms-view-thread" class="hidden">
+                    <div class="sms-thread-header">
+                        <div class="sms-thread-avatar" id="sms-thread-avatar">?</div>
+                        <div>
+                            <div id="sms-thread-title" class="sms-thread-title">Contact</div>
+                            <div id="sms-thread-number" class="sms-thread-number">+1234567890</div>
+                        </div>
+                    </div>
+                    <div id="sms-thread-messages" class="sms-thread-messages">
+                        <div class="sms-loading">Loading messages...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -272,9 +309,10 @@
         </div>
     </div>
 
-    <script src="js/clipboard.js?v=12"></script>
-    <script src="js/input.js?v=12"></script>
-    <script src="js/filemanager.js?v=12"></script>
-    <script src="js/app.js?v=12"></script>
+    <script src="js/clipboard.js?v=13"></script>
+    <script src="js/input.js?v=13"></script>
+    <script src="js/filemanager.js?v=13"></script>
+    <script src="js/sms.js?v=13"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>
