@@ -6,7 +6,7 @@ const fs = require('fs');
 const { randomUUID: uuidv4 } = require('crypto');
 
 const PORT = process.env.PORT || 8765;
-const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'projectwatch';
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'watzon';
 const SSL_CERT = process.env.SSL_CERT;
 const SSL_KEY = process.env.SSL_KEY;
 
@@ -476,5 +476,5 @@ wss.on('close', () => {
 });
 
 server.listen(PORT, () => {
-    log(`Relay server started on port ${PORT}`);
+    log(`WatzON relay server started on port ${PORT}`);
 });

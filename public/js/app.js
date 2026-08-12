@@ -1,4 +1,4 @@
-class ProjectWatchApp {
+class WatzonApp {
     constructor() {
         this.session = this.loadSession();
         this.ws = null;
@@ -620,6 +620,6 @@ class ProjectWatchApp {
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', () => {
-    window.app = new ProjectWatchApp();
+    window.app = new WatzonApp();
     window.app.init();
 });
