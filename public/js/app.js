@@ -554,6 +554,11 @@ class WatzonApp {
                     document.getElementById('pair-error').innerText = 'Invalid pairing code. Please try again.';
                     if (this.ws) { this.ws.close(); this.ws = null; }
                 } else {
+                    const btnPair = document.getElementById('btn-pair');
+                    if (btnPair && btnPair.disabled) {
+                        btnPair.disabled = false;
+                        btnPair.innerText = 'Connect';
+                    }
                     this.showToast(msg.message || 'Server error', 'error');
                 }
                 break;
