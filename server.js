@@ -85,7 +85,15 @@ setInterval(cleanupStaleData, 60 * 60 * 1000); // Run hourly
 const app = express();
 
 // Serve static files FIRST
-app.use(express.static('public'));
+app.use(express.static('public', { index: false }));
+
+// Force no-cache for the main HTML file to ensure updates propagate
+app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Middleware for parsing JSON APIs
 app.use(express.json());
