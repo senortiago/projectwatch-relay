@@ -3,6 +3,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 const { randomUUID: uuidv4 } = require('crypto');
 
 const PORT = process.env.PORT || 8765;
