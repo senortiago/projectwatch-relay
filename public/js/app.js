@@ -18,7 +18,7 @@ class WatzonApp {
 
     getWsUrl() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host || 'localhost:3000';
+        const host = window.location.host || 'localhost:8765';
         return `${protocol}//${host}/ws`;
     }
 
@@ -407,6 +407,15 @@ class WatzonApp {
 
         this.ws.onclose = (e) => {
             this.updateStatus('offline');
+            
+            // Reset pair button if we were trying to pair
+            const btnPair = document.getElementById('btn-pair');
+            if (btnPair && btnPair.innerText === 'Connecting...') {
+                btnPair.disabled = false;
+                btnPair.innerText = 'Connect';
+                document.getElementById('pair-error').innerText = 'Connection to server failed.';
+            }
+            
             if (e.code === 1008) {
                 this.showToast('Session expired. Please log in again.', 'error');
                 this.clearSession();
