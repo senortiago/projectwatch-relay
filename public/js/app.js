@@ -410,10 +410,11 @@ class WatzonApp {
             
             // Reset pair button if we were trying to pair
             const btnPair = document.getElementById('btn-pair');
-            if (btnPair && btnPair.innerText === 'Connecting...') {
+            if (btnPair && btnPair.disabled) {
                 btnPair.disabled = false;
                 btnPair.innerText = 'Connect';
-                document.getElementById('pair-error').innerText = 'Connection to server failed.';
+                const errElem = document.getElementById('pair-error');
+                if (errElem) errElem.innerText = 'Connection to server failed.';
             }
             
             if (e.code === 1008) {
@@ -642,22 +643,27 @@ class WatzonApp {
         const dotCtrl = document.getElementById('ctrl-status-dot');
         const overlay = document.getElementById('viewer-overlay');
         
-        dotDash.className = `status-dot ${status}`;
-        dotCtrl.className = `status-dot ${status}`;
+        if (dotDash) dotDash.className = `status-dot ${status}`;
+        if (dotCtrl) dotCtrl.className = `status-dot ${status}`;
         
         if (status === 'online') {
-            textDash.innerText = 'Connected';
-        } else if (status === 'offline') {
-            textDash.innerText = 'Offline';
+            if (textDash) textDash.innerText = 'Connected';
+            if (overlay) {
+                overlay.classList.add('hidden');
+                document.getElementById('overlay-text').innerText = 'Connected';
+            }
+        } else if (status === 'connecting') {
+            if (textDash) textDash.innerText = 'Connecting...';
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                document.getElementById('overlay-text').innerText = 'Reconnecting...';
+            }
         } else {
-            textDash.innerText = status.charAt(0).toUpperCase() + status.slice(1);
-        }
-        
-        if (status === 'connecting') {
-            overlay.classList.remove('hidden');
-        } else if (status === 'offline') {
-            overlay.classList.remove('hidden');
-            document.getElementById('overlay-text').innerText = 'Connection lost...';
+            if (textDash) textDash.innerText = 'Offline';
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                document.getElementById('overlay-text').innerText = 'Connection Lost';
+            }
         }
     }
 
