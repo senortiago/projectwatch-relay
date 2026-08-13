@@ -26,23 +26,37 @@ class WatzonApp {
         return {
             authToken: localStorage.getItem('pw_auth_token'),
             deviceId: localStorage.getItem('pw_device_id') || this.generateUUID(),
-            sessionToken: localStorage.getItem('pw_session_token'),
-            partnerName: localStorage.getItem('pw_partner_name'),
         };
+    }
+    
+    loadPairedDevices() {
+        try {
+            const stored = localStorage.getItem('pw_paired_devices');
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            return [];
+        }
     }
 
     saveSession() {
         if (this.session.authToken) localStorage.setItem('pw_auth_token', this.session.authToken);
         localStorage.setItem('pw_device_id', this.session.deviceId);
-        if (this.session.sessionToken) localStorage.setItem('pw_session_token', this.session.sessionToken);
-        if (this.session.partnerName) localStorage.setItem('pw_partner_name', this.session.partnerName);
+        this.savePairedDevices();
+    }
+    
+    savePairedDevices() {
+        localStorage.setItem('pw_paired_devices', JSON.stringify(this.pairedDevices));
     }
 
     clearSession() {
-        localStorage.removeItem('pw_session_token');
-        localStorage.removeItem('pw_partner_name');
-        this.session.sessionToken = null;
-        this.session.partnerName = null;
+        localStorage.removeItem('pw_auth_token');
+        this.session.authToken = null;
+    }
+    
+    unpairDevice(token) {
+        this.pairedDevices = this.pairedDevices.filter(d => d.sessionToken !== token);
+        this.savePairedDevices();
+        this.showDashboard();
     }
 
     generateUUID() {
@@ -55,6 +69,9 @@ class WatzonApp {
     }
 
     init() {
+        this.pairedDevices = this.loadPairedDevices();
+        this.activeSessionToken = null;
+        this.activePartnerName = null;
         this.saveSession(); // ensure device id is saved
         this.bindEvents();
         this.fileManager = new FileManagerUI(this);
@@ -112,14 +129,6 @@ class WatzonApp {
         document.getElementById('btn-pair').addEventListener('click', () => {
             const code = Array.from(inputs).map(i => i.value).join('');
             this.pair(code);
-        });
-
-        document.getElementById('btn-unpair').addEventListener('click', () => this.unpair());
-        document.getElementById('btn-connect').addEventListener('click', () => {
-            this.reconnectAttempts = 0;
-            this.isReconnecting = false;
-            this.connectWebSocket();
-            this.showScreen('controller');
         });
 
         // Controller Toolbar
@@ -244,48 +253,84 @@ class WatzonApp {
         
         document.getElementById('server-url-display').innerText = this.wsUrl;
         
+        let serverSessions = [];
         try {
             const res = await fetch('/api/status', {
                 headers: { 'Authorization': `Bearer ${this.session.authToken}` }
             });
             const data = await res.json();
-            
-            // Account-level pairing: if we don't have a local sessionToken but the server has active sessions, adopt the most recent one.
-            if (!this.session.sessionToken && data.sessions && data.sessions.length > 0) {
-                const latestSession = data.sessions.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive))[0];
-                this.session.sessionToken = latestSession.token;
-                this.session.partnerName = latestSession.androidName;
-                this.saveSession();
-            }
-            
-            if (this.session.sessionToken) {
-                document.getElementById('view-pairing').classList.remove('active');
-                document.getElementById('view-device').classList.add('active');
-                document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
-                
-                const mySession = data.sessions?.find(s => s.token === this.session.sessionToken);
-                if (mySession && mySession.androidOnline) {
-                    this.updateStatus('online');
-                } else {
-                    this.updateStatus('offline');
-                }
-            } else {
-                document.getElementById('view-device').classList.remove('active');
-                document.getElementById('view-pairing').classList.add('active');
-                document.querySelectorAll('.digit-input').forEach(i => i.value = '');
-            }
+            serverSessions = data.sessions || [];
         } catch (e) {
-            // Offline fallback
-            if (this.session.sessionToken) {
-                document.getElementById('view-pairing').classList.remove('active');
-                document.getElementById('view-device').classList.add('active');
-                document.getElementById('device-name').innerText = this.session.partnerName || 'Paired Device';
-                this.updateStatus('offline');
-            } else {
-                document.getElementById('view-device').classList.remove('active');
-                document.getElementById('view-pairing').classList.add('active');
-            }
+            console.warn('Could not fetch server status (offline mode)');
         }
+        
+        // Render devices list
+        const grid = document.getElementById('paired-devices-grid');
+        grid.innerHTML = '';
+        
+        if (this.pairedDevices.length > 0) {
+            this.pairedDevices.forEach(device => {
+                const srvSession = serverSessions.find(s => s.token === device.sessionToken);
+                const isOnline = srvSession ? srvSession.androidOnline : false;
+                
+                const card = document.createElement('div');
+                card.className = 'device-card';
+                card.innerHTML = `
+                    <div class="device-header">
+                        <div class="device-icon">📱</div>
+                        <div class="device-info">
+                            <h3>${this.escapeHtml(device.partnerName || 'Android Device')}</h3>
+                            <p class="status-text">
+                                <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span> 
+                                <span>${isOnline ? 'Online' : 'Offline'}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="device-actions">
+                        <button class="btn-connect-device btn ${isOnline ? 'btn-primary' : 'btn-outline'} btn-block btn-lg" data-token="${device.sessionToken}">
+                            ${isOnline ? 'Start Session' : 'Connect Anyway'}
+                        </button>
+                        <button class="btn-unpair-device btn btn-text btn-sm mt-3" data-token="${device.sessionToken}">Unpair Device</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            
+            // Attach event listeners
+            grid.querySelectorAll('.btn-connect-device').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const token = e.currentTarget.dataset.token;
+                    const device = this.pairedDevices.find(d => d.sessionToken === token);
+                    if (device) {
+                        this.activeSessionToken = device.sessionToken;
+                        this.activePartnerName = device.partnerName;
+                        this.reconnectAttempts = 0;
+                        this.isReconnecting = false;
+                        this.connectWebSocket(null, token);
+                        this.showScreen('controller');
+                    }
+                });
+            });
+            
+            grid.querySelectorAll('.btn-unpair-device').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const token = e.currentTarget.dataset.token;
+                    if (confirm('Are you sure you want to unpair this device?')) {
+                        this.unpairDevice(token);
+                    }
+                });
+            });
+        }
+    }
+
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
     }
 
     checkPairingCode() {
@@ -297,25 +342,11 @@ class WatzonApp {
     pair(code) {
         document.getElementById('btn-pair').disabled = true;
         document.getElementById('btn-pair').innerText = 'Connecting...';
-        
-        // Connect WS just for pairing
-        this.connectWebSocket(code);
+        this.connectWebSocket(code, null);
     }
 
-    unpair() {
+    connectWebSocket(pairingCode = null, sessionToken = null) {
         if (this.ws) {
-            this.ws.close();
-            this.ws = null;
-        }
-        this.clearSession();
-        this.reconnectAttempts = 0;
-        this.isReconnecting = false;
-        this.showDashboard();
-    }
-
-    connectWebSocket(pairingCode = null) {
-        if (this.ws) {
-            // Detach handlers before closing to prevent triggering onclose logic
             this.ws.onclose = null;
             this.ws.onerror = null;
             this.ws.onmessage = null;
@@ -351,10 +382,10 @@ class WatzonApp {
                     type: 'pair_request',
                     pairingCode: pairingCode
                 });
-            } else if (this.session.sessionToken) {
+            } else if (sessionToken) {
                 this.sendMessage({
                     type: 'reconnect',
-                    sessionToken: this.session.sessionToken,
+                    sessionToken: sessionToken,
                     deviceId: this.session.deviceId,
                     role: 'windows'
                 });
@@ -382,7 +413,7 @@ class WatzonApp {
                 this.showScreen('login');
                 return;
             }
-            if (document.getElementById('screen-controller').classList.contains('active') && this.session.sessionToken) {
+            if (document.getElementById('screen-controller').classList.contains('active') && this.activeSessionToken) {
                 this.scheduleReconnect();
             }
         };
@@ -420,9 +451,22 @@ class WatzonApp {
     handleMessage(msg) {
         switch (msg.type) {
             case 'pair_success':
-                this.session.sessionToken = msg.sessionToken;
-                this.session.partnerName = msg.partnerName;
-                this.saveSession();
+                document.getElementById('btn-pair').disabled = false;
+                document.getElementById('btn-pair').innerText = 'Connect';
+                document.querySelectorAll('.digit-input').forEach(i => i.value = '');
+                
+                // Add to paired devices array if not exists
+                if (!this.pairedDevices.find(d => d.sessionToken === msg.sessionToken)) {
+                    this.pairedDevices.push({
+                        sessionToken: msg.sessionToken,
+                        partnerName: msg.partnerName
+                    });
+                    this.savePairedDevices();
+                }
+                
+                this.activeSessionToken = msg.sessionToken;
+                this.activePartnerName = msg.partnerName;
+                
                 this.showToast('Paired successfully!', 'success');
                 document.getElementById('viewer-overlay').classList.add('hidden');
                 this.showScreen('controller');
@@ -434,7 +478,7 @@ class WatzonApp {
                 this.canvas.width = msg.width;
                 this.canvas.height = msg.height;
                 document.getElementById('res-indicator').innerText = `${msg.width}x${msg.height}`;
-                document.getElementById('ctrl-device-name').innerText = this.session.partnerName || 'Device';
+                document.getElementById('ctrl-device-name').innerText = this.activePartnerName || 'Device';
                 break;
                 
             case 'status':
@@ -442,7 +486,7 @@ class WatzonApp {
                 if (msg.state === 'ready') {
                     this.updateStatus('online');
                     document.getElementById('viewer-overlay').classList.add('hidden');
-                    document.getElementById('ctrl-device-name').innerText = this.session.partnerName || 'Device';
+                    document.getElementById('ctrl-device-name').innerText = this.activePartnerName || 'Device';
                     this.requestResolution();
                 } else if (msg.state === 'error') {
                     this.showToast(`Device error: ${msg.message}`, 'error');
@@ -481,7 +525,7 @@ class WatzonApp {
             case 'reconnect_success':
                 this.updateStatus('online');
                 document.getElementById('viewer-overlay').classList.add('hidden');
-                document.getElementById('ctrl-device-name').innerText = msg.partnerName || this.session.partnerName || 'Device';
+                document.getElementById('ctrl-device-name').innerText = msg.partnerName || this.activePartnerName || 'Device';
                 this.requestResolution();
                 if (!msg.partnerOnline) {
                     this.showToast('Connected to server. Waiting for device...', 'warning');
